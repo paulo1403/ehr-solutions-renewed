@@ -44,3 +44,4 @@ next-env.d.ts
 .eslintcache
 .cache/
 .lintstagedrc*
+/src/generated/prisma

@@ -1,0 +1,427 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  SUPER_ADMIN
+  CLINIC_ADMIN
+  DOCTOR
+  NURSE
+  RECEPTIONIST
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum EhrType {
+  CONSULTATION
+  DIAGNOSIS
+  TREATMENT
+  LAB_RESULT
+  IMAGING
+  PRESCRIPTION
+  SURGERY
+  DISCHARGE_SUMMARY
+}
+
+enum EhrStatus {
+  DRAFT
+  ACTIVE
+  AMENDED
+  CANCELLED
+}
+
+enum ConfidentialityLevel {
+  LOW
+  NORMAL
+  RESTRICTED
+  VERY_RESTRICTED
+}
+
+enum UrgencyLevel {
+  LOW
+  NORMAL
+  HIGH
+  EMERGENCY
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ACCESSED
+  EXPIRED
+  CANCELLED
+}
+
+enum AuditAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  ACCESS_GRANTED
+  ACCESS_DENIED
+}
+
+// ============================================================================
+// MODELS
+// ============================================================================
+
+model Clinic {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  license     String   @unique
+
+  // Dirección
+  street    String
+  city      String
+  state     String
+  zipCode   String   @map("zip_code")
+  country   String   @default("Peru")
+
+  // Información de contacto
+  phone          String
+  email          String
+  website        String?
+  emergencyPhone String? @map("emergency_phone")
+
+  // Especialidades (array de strings)
+  specialties String[]
+
+  // Configuraciones
+  allowDataSharing     Boolean @default(true) @map("allow_data_sharing")
+  autoApproveRequests  Boolean @default(false) @map("auto_approve_requests")
+  encryptionEnabled    Boolean @default(true) @map("encryption_enabled")
+  auditLogRetention    Int     @default(2555) @map("audit_log_retention") // días
+
+  // Estado
+  isActive Boolean @default(true) @map("is_active")
+
+  // Metadatos
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  users               User[]
+  patients            Patient[]
+  ehr                 Ehr[]
+  requestingRequests  EhrRequest[] @relation("RequestingClinic")
+  ownerRequests       EhrRequest[] @relation("OwnerClinic")
+
+  @@map("clinics")
+}
+
+model User {
+  id       String   @id @default(cuid())
+  clinicId String   @map("clinic_id")
+  clinic   Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  // Información personal
+  email        String  @unique
+  passwordHash String  @map("password_hash")
+  firstName    String  @map("first_name")
+  lastName     String  @map("last_name")
+
+  // Rol y permisos
+  role UserRole
+
+  // Información profesional
+  medicalLicense String?  @map("medical_license")
+  specialties    String[]
+
+  // Estado
+  isActive       Boolean   @default(true) @map("is_active")
+  emailVerified  Boolean   @default(false) @map("email_verified")
+  lastLogin      DateTime? @map("last_login")
+
+  // Configuraciones
+  preferredLanguage String @default("es") @map("preferred_language")
+  timezone          String @default("America/Lima")
+
+  // Metadatos
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  ehr             Ehr[]
+  requestsMade    EhrRequest[] @relation("RequestedBy")
+  requestsApproved EhrRequest[] @relation("ApprovedBy")
+  requestLogs     RequestLog[]
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+model Patient {
+  id       String @id @default(cuid())
+  clinicId String @map("clinic_id")
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  // Identificación
+  nationalId     String @map("national_id")
+  nationalIdType String @default("DNI") @map("national_id_type")
+
+  // Información personal
+  firstName   String  @map("first_name")
+  lastName    String  @map("last_name")
+  dateOfBirth DateTime @map("date_of_birth")
+  gender      Gender
+
+  // Dirección
+  street    String
+  city      String
+  state     String
+  zipCode   String @map("zip_code")
+  country   String @default("Peru")
+
+  // Contacto
+  phone                   String
+  email                   String?
+  preferredContactMethod  String  @default("PHONE") @map("preferred_contact_method")
+
+  // Contacto de emergencia
+  emergencyContactName         String  @map("emergency_contact_name")
+  emergencyContactRelationship String  @map("emergency_contact_relationship")
+  emergencyContactPhone        String  @map("emergency_contact_phone")
+  emergencyContactEmail        String? @map("emergency_contact_email")
+
+  // Estado
+  isActive Boolean @default(true) @map("is_active")
+
+  // Metadatos
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  ehr        Ehr[]
+  ehrRequests EhrRequest[]
+
+  @@unique([nationalId, clinicId])
+  @@map("patients")
+}
+
+model Ehr {
+  id        String @id @default(cuid())
+  patientId String @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinicId  String  @map("clinic_id")
+  clinic    Clinic  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctorId  String  @map("doctor_id")
+  doctor    User    @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+
+  // Información básica
+  type        EhrType
+  title       String
+  description String?
+
+  // Estado y confidencialidad
+  status               EhrStatus            @default(DRAFT)
+  confidentialityLevel ConfidentialityLevel @default(NORMAL) @map("confidentiality_level")
+
+  // Metadatos blockchain/FHIR
+  blockchainHash   String? @map("blockchain_hash")
+  ipfsHash         String? @map("ipfs_hash")
+  fhirResourceId   String? @map("fhir_resource_id")
+
+  // Fechas
+  encounterDate DateTime  @map("encounter_date")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  finalizedAt   DateTime? @map("finalized_at")
+
+  // Relaciones
+  content  EhrContent?
+  fhirData EhrFhirData?
+  attachments Attachment[]
+
+  @@map("ehr")
+}
+
+model EhrContent {
+  id    String @id @default(cuid())
+  ehrId String @unique @map("ehr_id")
+  ehr   Ehr    @relation(fields: [ehrId], references: [id], onDelete: Cascade)
+
+  // Información básica
+  chiefComplaint            String? @map("chief_complaint")
+  historyOfPresentIllness   String? @map("history_of_present_illness")
+
+  // Datos estructurados en JSON
+  vitalSigns          Json? @map("vital_signs")
+  physicalExamination Json? @map("physical_examination")
+  diagnoses           Json?
+  medications         Json?
+  procedures          Json?
+  labResults          Json? @map("lab_results")
+  notes               String?
+  attachments         Json?
+
+  // Metadatos
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("ehr_content")
+}
+
+model EhrFhirData {
+  id    String @id @default(cuid())
+  ehrId String @unique @map("ehr_id")
+  ehr   Ehr    @relation(fields: [ehrId], references: [id], onDelete: Cascade)
+
+  // Recursos FHIR en formato JSON
+  patientResource     Json  @map("patient_resource")
+  encounterResource   Json  @map("encounter_resource")
+  conditionResources  Json? @map("condition_resources")
+  observationResources Json? @map("observation_resources")
+  medicationResources Json? @map("medication_resources")
+  procedureResources  Json? @map("procedure_resources")
+
+  // Metadatos de validación
+  fhirVersion       String  @default("R4") @map("fhir_version")
+  validationStatus  String  @default("VALID") @map("validation_status")
+  validationErrors  Json?   @map("validation_errors")
+
+  // Fechas
+  generatedAt      DateTime @default(now()) @map("generated_at")
+  lastValidatedAt  DateTime @default(now()) @map("last_validated_at")
+
+  @@map("ehr_fhir_data")
+}
+
+model EhrRequest {
+  id                   String      @id @default(cuid())
+  requestingClinicId   String      @map("requesting_clinic_id")
+  requestingClinic     Clinic      @relation("RequestingClinic", fields: [requestingClinicId], references: [id], onDelete: Cascade)
+  ownerClinicId        String      @map("owner_clinic_id")
+  ownerClinic          Clinic      @relation("OwnerClinic", fields: [ownerClinicId], references: [id], onDelete: Cascade)
+  patientId            String      @map("patient_id")
+  patient              Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  requestedBy          String      @map("requested_by")
+  requestedByUser      User        @relation("RequestedBy", fields: [requestedBy], references: [id], onDelete: Restrict)
+
+  // Detalles de la solicitud
+  reason                  String
+  urgencyLevel            UrgencyLevel    @default(NORMAL) @map("urgency_level")
+  requestedRecordTypes    EhrType[]       @map("requested_record_types")
+
+  // Estado
+  status RequestStatus @default(PENDING)
+
+  // Información de aprobación/rechazo
+  approvedBy      String?   @map("approved_by")
+  approvedByUser  User?     @relation("ApprovedBy", fields: [approvedBy], references: [id], onDelete: Restrict)
+  approvedAt      DateTime? @map("approved_at")
+  rejectionReason String?   @map("rejection_reason")
+
+  // Token de acceso
+  accessToken String?   @map("access_token")
+  expiresAt   DateTime? @map("expires_at")
+  accessedAt  DateTime? @map("accessed_at")
+
+  // Metadatos
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  logs RequestLog[]
+
+  @@map("ehr_requests")
+}
+
+model RequestLog {
+  id        String @id @default(cuid())
+  requestId String @map("request_id")
+  request   EhrRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  // Cambio registrado
+  previousStatus RequestStatus? @map("previous_status")
+  newStatus      RequestStatus  @map("new_status")
+
+  // Usuario que realizó el cambio
+  changedBy     String @map("changed_by")
+  changedByUser User   @relation(fields: [changedBy], references: [id], onDelete: Restrict)
+
+  // Detalles
+  reason         String?
+  additionalData Json?   @map("additional_data")
+
+  // Metadatos
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("request_logs")
+}
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  userId       String?     @map("user_id")
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  resourceType String      @map("resource_type")
+  resourceId   String?     @map("resource_id")
+  action       AuditAction
+  description  String?
+
+  // Contexto
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  // Datos adicionales
+  additionalData Json? @map("additional_data")
+
+  // Metadatos
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
+
+model Attachment {
+  id       String @id @default(cuid())
+  ehrId    String @map("ehr_id")
+  ehr      Ehr    @relation(fields: [ehrId], references: [id], onDelete: Cascade)
+
+  // Información del archivo
+  filename         String @map("filename")
+  originalFilename String @map("original_filename")
+  mimeType         String @map("mime_type")
+  fileSize         BigInt @map("file_size")
+
+  // Almacenamiento
+  storagePath     String @map("storage_path")
+  storageProvider String @default("local") @map("storage_provider")
+
+  // Hash para integridad
+  fileHash String @map("file_hash")
+
+  // Metadatos
+  description String?
+  isEncrypted Boolean @default(true) @map("is_encrypted")
+
+  // Estado
+  isActive Boolean @default(true) @map("is_active")
+
+  // Fechas
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("attachments")
+}
