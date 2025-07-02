@@ -1,5 +1,51 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Development Setup
+
+This project is configured with the following development tools for optimal code quality:
+
+### Code Quality Tools
+
+- **ESLint**: Configured with Next.js best practices, TypeScript support, and React rules
+- **Prettier**: Automatic code formatting with consistent style
+- **TypeScript**: Type checking for enhanced development experience
+- **Husky**: Git hooks for automated quality checks
+- **lint-staged**: Run linters on staged files only
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev          # Start development server with Turbopack
+npm run build        # Build for production
+npm run start        # Start production server
+
+# Code Quality
+npm run lint         # Run ESLint
+npm run lint:fix     # Run ESLint with auto-fix
+npm run format       # Format code with Prettier
+npm run format:check # Check if code is formatted
+npm run type-check   # TypeScript type checking
+npm run check-all    # Run all quality checks
+```
+
+### Pre-commit Hooks
+
+This project automatically runs the following on each commit:
+
+- ESLint with auto-fix for TypeScript/JavaScript files
+- Prettier formatting for all supported files
+- Type checking
+
+### VS Code Setup
+
+The project includes VS Code configuration for:
+
+- Automatic formatting on save
+- ESLint integration
+- Tailwind CSS IntelliSense
+- Recommended extensions
+
 ## Getting Started
 
 First, run the development server:
