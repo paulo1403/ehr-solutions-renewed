@@ -9,6 +9,7 @@ export interface User {
   lastName: string;
   role: UserRole;
   clinicId: string;
+  specialties: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

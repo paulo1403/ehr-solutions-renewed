@@ -37,18 +37,15 @@ EHR Solutions es un sistema innovador que permite a las clínicas gestionar sus 
 
 ## 🏗️ Arquitectura del Sistema
 
-### Frontend
+### Full-Stack con Next.js 15
 
-- **Next.js 15** con TypeScript
-- **Tailwind CSS** para estilos
-- **React Hook Form** para manejo de formularios
-- **Zustand** para gestión de estado
-
-### Backend (Próximas fases)
-
-- **Node.js** con Express
-- **PostgreSQL** para base de datos principal
-- **Prisma** como ORM
+- **Frontend**: React Components con TypeScript
+- **Backend**: API Routes + Server Actions integrados
+- **Estilos**: Tailwind CSS para diseño responsivo
+- **Formularios**: React Hook Form + Server Actions
+- **Estado**: Zustand para cliente, Server Actions para servidor
+- **Base de Datos**: PostgreSQL con Prisma ORM
+- **Autenticación**: JWT + Middleware nativo de Next.js
 
 ### Blockchain & FHIR (Fases avanzadas)
 
