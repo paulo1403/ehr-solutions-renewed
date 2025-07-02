@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
         lastName: true,
         role: true,
         specialties: true,
+        clinicId: true,
         clinic: {
           select: {
             id: true,
@@ -77,11 +78,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Generar token JWT
-    const fullUser = {
-      ...user,
-      clinicId: validatedData.clinicId,
-    };
-    const token = generateToken(fullUser);
+    const token = generateToken(user);
 
     // Crear la respuesta con el token en una cookie segura
     const response = NextResponse.json(

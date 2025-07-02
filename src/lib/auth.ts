@@ -1,8 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-import { User } from '@/types';
-
 export interface JWTPayload {
   userId: string;
   clinicId: string;
@@ -10,7 +8,14 @@ export interface JWTPayload {
   email: string;
 }
 
-export function generateToken(user: User): string {
+export interface TokenUserData {
+  id: string;
+  clinicId: string;
+  role: string;
+  email: string;
+}
+
+export function generateToken(user: TokenUserData): string {
   const payload: JWTPayload = {
     userId: user.id,
     clinicId: user.clinicId,
@@ -19,11 +24,11 @@ export function generateToken(user: User): string {
   };
 
   return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: '24h', // Token válido por 24 horas
+    expiresIn: '24h',
   });
 }
 
-export function generateRefreshToken(user: User): string {
+export function generateRefreshToken(user: TokenUserData): string {
   const payload: JWTPayload = {
     userId: user.id,
     clinicId: user.clinicId,
