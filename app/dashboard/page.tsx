@@ -121,6 +121,24 @@ export default function DashboardPage() {
 
         {/* Quick Actions */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+          {/* Gestión de Clínicas - Solo para SUPER_ADMIN */}
+          {user.role === 'SUPER_ADMIN' && (
+            <div className='bg-white rounded-lg shadow-md p-6'>
+              <h3 className='text-lg font-semibold text-gray-900 mb-2'>
+                Gestión de Clínicas
+              </h3>
+              <p className='text-gray-600 mb-4'>
+                Administra todas las clínicas del sistema
+              </p>
+              <Button
+                className='w-full'
+                onClick={() => router.push('/clinics')}
+              >
+                Gestionar Clínicas
+              </Button>
+            </div>
+          )}
+
           <div className='bg-white rounded-lg shadow-md p-6'>
             <h3 className='text-lg font-semibold text-gray-900 mb-2'>
               Pacientes
